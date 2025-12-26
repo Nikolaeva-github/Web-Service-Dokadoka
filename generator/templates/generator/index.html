@@ -1,0 +1,443 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dokadoka - Заполнение шаблонных документов</title>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'generator/style.css' %}">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <button class="logo-btn">
+                    <span class="logo-icon">📄</span>
+                    <span>Dokadoka</span>
+                </button>
+                <nav>
+                    <ul>
+                        <li><a href="#home">Главная</a></li>
+                        <li><a href="#how-it-works">Как это работает</a></li>
+                        <li><a href="#templates">Шаблоны</a></li>
+                        <li><a href="#contact">Контакты</a></li>
+                        <li>
+                            <button class="profile-btn">
+                                <span class="profile-icon">👤</span>
+                                Профиль
+                            </button>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="main-content">
+            <div class="hero">
+                <h1>Автоматизируйте заполнение документов</h1>
+                <p>Сервис Dokadoka позволяет автоматически заполнять шаблонные документы форматов DOC, DOCX и ODT на основе данных из CSV-файлов</p>
+                <a href="#upload" class="btn">Начать работу</a>
+            </div>
+
+            <div class="workflow" id="how-it-works">
+                <div class="step">
+                    <div class="step-icon">📊</div>
+                    <h3>Загрузите CSV с данными</h3>
+                    <p>Подготовьте таблицу с данными, которые будут использоваться для заполнения документов. Файл может быть либо TXT формата, либо CSV. Данные должны быь разделены символом ";"</p>
+                </div>
+                <div class="step">
+                    <div class="step-icon">📝</div>
+                    <h3>Загрузите шаблон документа</h3>
+                    <p>Подготовьте шаблон документа, в котором переменные данные заключены в фигурные скобки. Принимаются файлы форматов DOC, DOCX и ODT</p>
+                </div>
+                <div class="step">
+                    <div class="step-icon">🚀</div>
+                    <h3>Получите заполненные документы</h3>
+                    <p>Нажмите кнопку "Заполнить шаблон" и получите полностью готовые к печати или отправке документы!</p>
+                </div>
+            </div>
+
+            <div class="upload-section" id="upload">
+                <h2>Начать обработку документов</h2>
+                <p>Загрузите CSV-файл с данными и шаблон документа для автоматического заполнения</p>
+
+                <form id="upload-form" method="post" enctype="multipart/form-data" action="{% url 'generate' %}">
+                    {% csrf_token %}
+
+                    <div class="form-group">
+                        <label for="csv-file">CSV-файл с данными</label>
+                        <div class="upload-area" id="csv-upload-area">
+                            <div class="upload-icon">📊</div>
+                            <p>Перетащите CSV-файл сюда или нажмите для выбора</p>
+                            <input type="file" id="csv-file" name="csv_file" class="file-input" accept=".csv">
+                            <input type="hidden" id="added-rows" name="added_rows">
+                            <input type="hidden" id="added-header" name="added_header">
+                        </div>
+                        <div class="file-list" id="csv-file-list"></div>
+                        <div id="csv-add-row" style="display: none; margin-bottom: 1rem;">
+                            <label for="csv-row-input">Добавить строку (Можно вручную написать корректную строку вместо неверной):</label>
+                            <input type="text" id="csv-row-input" placeholder="Введите данные одной строки через ;">
+                            <button type="button" id="add-row-btn">Применить</button>
+                            <button type="button" id="add-header-btn">Применить как заголовок</button>
+                        </div>
+                        <div id="csv-preview"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="template-file">Шаблон документа</label>
+                        <div class="upload-area" id="template-upload-area">
+                            <div class="upload-icon">📝</div>
+                            <p>Перетащите шаблон документа (DOC, DOCX, ODT) или нажмите для выбора</p>
+                            <input type="file" id="template-file" name="template_file" class="file-input" accept=".doc,.docx,.odt">
+                        </div>
+                        <div class="file-list" id="template-file-list"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="output-format">Формат выходных документов</label>
+                        <select id="output-format" name="output_format">
+                            <option value="docx">DOCX</option>
+                            <option value="doc">DOC</option>
+                            <option value="odt">ODT</option>
+                            <option value="pdf">PDF</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="output-format">Выгрузить как</label>
+                        <select id="output-format" name="output_type">
+                            <option value="file">Один файл</option>
+                            <option value="archive">Архив файлов</option>
+                        </select>
+                    </div>
+
+                    <div class="preview-section" id="preview" style="display: none;">
+                        <h2>Предварительный просмотр</h2>
+                        <p>Проверьте соответствие данных и шаблона перед обработкой</p>
+                        <div class="preview-container" id="preview-container">
+                            <!-- Здесь будет отображаться предварительный просмотр -->
+                        </div>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button type="button" class="btn" id="preview-btn">Предварительный просмотр</button>
+                        <button type="submit" class="btn btn-secondary" id="process-btn">Заполнить шаблон</button>
+                    </div>
+                </form>
+
+            </div>
+
+            
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>О Dokadoka</h3>
+                    <p>Веб-сервис для автоматизации заполнения шаблонных документов на основе данных из CSV-файлов.</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Поддерживаемые форматы</h3>
+                    <p>DOC, DOCX, ODT, CSV</p>
+                </div>
+                <div class="footer-section" id="contact">
+                    <h3>Контакты</h3>
+                    <p>Email: support@dokadoka.com</p>
+                    <p>Телефон: +7 (XXX) XXX-XX-XX</p>
+                </div>
+            </div>
+            <div class="copyright">
+                <p>&copy; 2023 Dokadoka. Все права защищены.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        function setupFileInput(inputId, dropAreaId, listId) {
+            const input = document.getElementById(inputId);
+            const dropArea = document.getElementById(dropAreaId);
+            const list = document.getElementById(listId);
+
+            function updateFileList() {
+                list.innerHTML = '';
+                Array.from(input.files).forEach((file, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'file-item';
+                    div.textContent = file.name + ' ';
+                    const removeBtn = document.createElement('button');
+                    removeBtn.type = 'button';
+                    removeBtn.textContent = '✕';
+                    removeBtn.addEventListener('click', () => {
+                        const dt = new DataTransfer();
+                        Array.from(input.files).forEach((f, i) => { if (i !== index) dt.items.add(f); });
+                        input.files = dt.files;
+                        updateFileList();
+
+                        if (inputId === 'csv-file') {
+                            document.getElementById("csv-preview").innerHTML = "";
+                            document.getElementById("csv-add-row").innerHTML = "";
+                        }
+                    });
+                    div.appendChild(removeBtn);
+                    list.appendChild(div);
+                });
+            }
+
+            function filterCsvFiles(fileList) {
+                return Array.from(fileList).filter(file => {
+                    const name = file.name.toLowerCase();
+
+                    // Разрешённые расширения
+                    return name.endsWith(".csv") || name.endsWith(".txt");
+                });
+            }
+
+            // --- Событие выбора через проводник ---
+            input.addEventListener('change', () => {
+                // Фильтруем допустимые файлы для CSV
+                if (inputId === 'csv-file') {
+                    const filtered = filterCsvFiles(input.files);
+                    if (filtered.length === 0) {
+                        alert("Можно загружать только CSV или TXT файлы.");
+                        input.value = ""; // очищаем поле
+                        document.getElementById("csv-preview").innerHTML = "";
+                        document.getElementById("csv-add-row").innerHTML = "";
+                        return;
+                    }
+                    const dt = new DataTransfer();
+                    filtered.forEach(f => dt.items.add(f));
+                    input.files = dt.files;
+
+                    // Запускаем проверку CSV
+                    input.dispatchEvent(new Event("csv_valid"));
+                }
+
+                updateFileList();
+            });
+
+            dropArea.addEventListener('click', () => input.click());
+
+            dropArea.addEventListener('dragover', (e) => { e.preventDefault(); dropArea.classList.add('hover'); });
+            dropArea.addEventListener('dragleave', (e) => { e.preventDefault(); dropArea.classList.remove('hover'); });
+            dropArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropArea.classList.remove('hover');
+                let files = filterCsvFiles(e.dataTransfer.files);
+
+                // если вообще нет подходящих файлов — просто выходим
+                if (files.length === 0) {
+                    alert("Можно загружать только CSV или TXT файлы.");
+                    return;
+                }
+
+                const dt = new DataTransfer();
+                files.forEach(f => dt.items.add(f));
+                input.files = dt.files;
+
+                updateFileList();
+
+                if (files.length > 0)
+                    input.dispatchEvent(new Event("csv_valid"));
+            });
+        }
+
+        // Подключаем для двух полей
+        setupFileInput('csv-file', 'csv-upload-area', 'csv-file-list');
+        setupFileInput('template-file', 'template-upload-area', 'template-file-list');
+
+        let added_to_csv_rows = []; // добавленные пользователем строки
+        let table, newHeader, tbodyBad, tbodyAdded, tbodyGood;
+
+        function updatePreview() {
+            const lastRow = added_to_csv_rows[added_to_csv_rows.length - 1];
+            const tr = document.createElement("tr");
+            for (let i = 0; i < window.lastCsvData.header.length; i++) {
+                const td = document.createElement("td");
+                td.textContent = lastRow[i] ?? "";
+                tr.appendChild(td);
+            }
+            tbodyAdded.appendChild(tr);
+        }
+
+        function deleteOldData() {
+            if (table && table.parentNode) {
+                table.parentNode.removeChild(table);
+            }
+            table = null;
+            tbodyBad = null;
+            tbodyAdded = null;
+            newHeader = null;
+            tbodyGood = null;
+            added_to_csv_rows = [];
+            console.log("удалились добавленные строки");
+        }
+
+        function updatePreviewHeader(newHeader) {
+            let headerRow = table.querySelector('tr');
+            headerRow.innerHTML = "";
+            newHeader.forEach(h => {
+                const th = document.createElement('th');
+                th.textContent = h;
+                headerRow.appendChild(th);
+            });
+        }
+
+        document.getElementById('add-header-btn').addEventListener('click', function () {
+            const inputHeader = document.getElementById('csv-row-input');
+            newHeader = inputHeader.value.split(";");
+            updatePreviewHeader(newHeader);
+        })
+
+        function showPreview(data) {
+            deleteOldData();
+
+            const div = document.getElementById("csv-preview");
+            document.getElementById("csv-add-row").style.display = " block";
+
+            table = document.createElement("table");
+            table.classList.add("csv-table");
+
+            // ---- Заголовок ----
+            let headerRow = document.createElement("tr");
+            data.header.forEach(col => {
+                const th = document.createElement("th");
+                th.textContent = col;
+                headerRow.appendChild(th);
+            });
+            table.appendChild(headerRow);
+
+            // ---- Тело для добавленных пользователем строк ----
+            tbodyAdded = document.createElement("tbody");
+            table.appendChild(tbodyAdded);
+
+            // ---- Тело для плохих строк ----
+            tbodyBad = document.createElement("tbody");
+            data.bad_rows.forEach(row => {
+                const tr = document.createElement("tr");
+                tr.classList.add("bad-row");
+                row.forEach(col => {
+                    const td = document.createElement("td");
+                    td.textContent = col ?? "";
+                    tr.appendChild(td);
+                });
+                tbodyBad.appendChild(tr);
+            });
+            table.appendChild(tbodyBad);
+
+            // для хороших строк
+            tbodyGood = document.createElement("tbody");
+            data.good_rows.forEach(row => {
+                const tr = document.createElement("tr");
+                tr.classList.add("good-row");
+                row.forEach(col => {
+                    const td = document.createElement("td");
+                    td.textContent = col ?? "";
+                    tr.appendChild(td);
+                });
+                tbodyGood.appendChild(tr);
+            });
+            table.appendChild(tbodyGood);
+
+            // Добавляем таблицу в div один раз
+            div.appendChild(table);
+        }
+
+        document.getElementById('add-row-btn').addEventListener('click', function () {
+            let input_element = document.getElementById('csv-row-input');
+            let added_row = input_element.value.split(";");
+            input_element.value = "";
+            if (added_row.length == window.lastCsvData.header.length) {
+                added_to_csv_rows.push(added_row);
+                console.log("добвились строки");
+                updatePreview();
+            }
+            else {
+                alert("Количество столбцов неверное");
+            }
+            
+        });
+
+        document.getElementById("csv-file").addEventListener("csv_valid", function () {
+            let file = this.files[0];
+            if (!file) return;
+
+            let formData = new FormData();
+            formData.append("csv_file", file);
+
+            fetch("/check_csv/", {
+                method: "POST",
+                body: formData,
+                headers: { "X-CSRFToken": "{{ csrf_token }}" }
+            })
+                .then(res => res.json())
+                .then(data => {
+                    window.lastCsvData = data;
+                    showPreview(data);
+                })
+                .catch(err => console.error(err));
+        });
+
+        document.getElementById('preview-btn').addEventListener('click', function () {
+
+            document.getElementById('preview').style.display = 'block';
+
+            const file_csv = document.getElementById('csv-file').files[0];
+            const file_template = document.getElementById('template-file').files[0];
+
+            if (!file_csv || !file_template) {
+                document.getElementById('preview-container').innerHTML = `
+            <h3>Предварительный просмотр данных</h3>
+            <p>Чтобы увидеть предварительный просмотр — загрузите CSV и шаблон.</p>
+        `;
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("csv_file", file_csv);
+            formData.append("template_file", file_template);
+            formData.append("added_rows", JSON.stringify(added_to_csv_rows));
+            formData.append("added_header", JSON.stringify(newHeader));
+
+            fetch("preview/", {
+                method: "POST",
+                body: formData,
+                headers: {
+                    "X-CSRFToken": "{{ csrf_token }}"
+                }
+            })
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById("preview-container").innerHTML = html;
+                })
+                .catch(err => console.error("Ошибка preview:", err));
+        });
+
+        document.getElementById('upload-form').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            let file_csv = document.getElementById('csv-file').files[0];
+            let file_template = document.getElementById('template-file').files[0];
+            if (!file_csv || !file_template) {
+                console.log("", file_csv, file_template);
+                alert("Добавьте файлы");
+                return;
+            }
+
+            const hiddenInput = document.getElementById('added-rows');
+            hiddenInput.value = JSON.stringify(added_to_csv_rows);
+            console.log("на сервер отправились:", hiddenInput.value);
+            const addedHeader = document.getElementById('added-header');
+            addedHeader.value = JSON.stringify(newHeader);
+            console.log("на сервер отправился новый заголовок:", addedHeader.value);
+            this.submit();
+        });
+
+        
+    </script>
+
+</body>
+</html>
